@@ -1,0 +1,9 @@
+name: wolfizen
+version: '${project.version}'
+main: net.mrwogiz.wolfizen.bukkit.Wolfizen
+description: A plugin for mrWolf Scripts! discord mrilgiz.
+author: mrilgiz
+load: STARTUP
+depend:
+  - Denizen
+  - Depenizen
