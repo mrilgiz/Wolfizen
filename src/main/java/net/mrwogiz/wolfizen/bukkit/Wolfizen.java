@@ -4,6 +4,7 @@ import com.denizenscript.denizencore.DenizenCore;
 
 import net.mrwogiz.wolfizen.bukkit.commands.*;
 
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class Wolfizen extends JavaPlugin {
@@ -15,7 +16,9 @@ public class Wolfizen extends JavaPlugin {
         // Регистрация команд
         DenizenCore.commandRegistry.registerCommand(ZipCommand.class);
         DenizenCore.commandRegistry.registerCommand(UnzipCommand.class);
-        DenizenCore.commandRegistry.registerCommand(MineskinCommand.class);
+        Bukkit.getScheduler().runTaskAsynchronously(this,() -> {
+            DenizenCore.commandRegistry.registerCommand(MineskinCommand.class);
+        });
         plugin = this;
         getLogger().info("========================================");
         getLogger().info("  Welcome to the Wolfizen Plugin!     ");

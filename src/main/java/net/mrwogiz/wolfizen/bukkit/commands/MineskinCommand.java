@@ -1,5 +1,8 @@
 package net.mrwogiz.wolfizen.bukkit.commands;
 
+import com.denizenscript.denizencore.objects.ObjectTag;
+import com.denizenscript.denizencore.objects.core.BinaryTag;
+import com.denizenscript.denizencore.objects.core.DurationTag;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.objects.core.ImageTag;
 import com.denizenscript.denizencore.scripts.ScriptEntry;
@@ -10,13 +13,18 @@ import kong.unirest.core.HttpResponse;
 import kong.unirest.core.MultipartBody;
 import kong.unirest.core.Unirest;
 import net.mrwogiz.wolfizen.bukkit.Wolfizen;
+import org.bukkit.Bukkit;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 public class MineskinCommand extends AbstractCommand {
@@ -53,16 +61,16 @@ public class MineskinCommand extends AbstractCommand {
         if (version.asString().equals("2")) {
             apiUrl = "https://api.mineskin.org/v2/generate";
         } else if (version.asString().equals("1")) {
-            apiUrl = "https://api.mineskin.org/generate/upload";
+            apiUrl = "https://api.mineskin.org/v2/generate";
         } else if (version.asString().equals("3")) {
             apiUrl = "https://api.mineskin.org/v2/queue";
         } else {
-            apiUrl = "https://api.mineskin.org/generate/upload";
+            apiUrl = "https://api.mineskin.org/v2/generate";
         }
-        uploadSkin(apiKey, image, apiUrl, scriptEntry);
+        uploadSkin(version,apiKey, image, apiUrl, scriptEntry);
     }
 
-    private static void uploadSkin(String apiKey, ImageTag image, String apiUrl, ScriptEntry scriptEntry) throws IOException {
+    private static void uploadSkin(ElementTag version,String apiKey, ImageTag image, String apiUrl, ScriptEntry scriptEntry) throws IOException {
         BufferedImage bufferedImage = image.getJavaObject();;
         if (!Files.exists(Wolfizen.getPluginI().getDataFolder().toPath())) {
             try {
@@ -84,25 +92,32 @@ public class MineskinCommand extends AbstractCommand {
         if (!file.exists()) {
             scriptEntry.saveObject("data", new ElementTag("false"));
             scriptEntry.setFinished(true);
+            return;
         }
         try {
             // Create the multipart request
-            MultipartBody request = Unirest.post(apiUrl)
-                    .header("Authorization", "Bearer " + apiKey)
-                    .field("file", file);
-
-            // Execute the request and get the response
-            HttpResponse<String> response = request.asString();
-
-            // Check if the response is successful
-            if (response.getStatus() == 200) {
-                String result = response.getBody();
-                scriptEntry.saveObject("data", new ElementTag(result));
-            } else {
-                scriptEntry.saveObject("data", new ElementTag("false"));
-            }
-
-            scriptEntry.setFinished(true);
+            AtomicInteger status = new AtomicInteger(404);
+            AtomicReference<String> result = new AtomicReference<>("false");
+            Bukkit.getScheduler().runTaskAsynchronously(Wolfizen.getPluginI(), () -> {
+                MultipartBody request = Unirest.post(apiUrl)
+                        .header("Authorization", "Bearer " + apiKey)
+                        .field("file", file);
+                // Execute the request and get the response
+                HttpResponse<String> response = request.asString();
+                status.set(response.getStatus());
+                result.set(response.getBody());
+                Bukkit.getScheduler().runTask(Wolfizen.getPluginI(),() -> {
+                    System.out.println(status.get() == 200);
+                    if (status.get() == 200) {
+                        scriptEntry.saveObject("data", new ElementTag(result.get()));
+                        scriptEntry.setFinished(true);
+                    } else {
+                        scriptEntry.saveObject("data", new ElementTag("false"));
+                        scriptEntry.setFinished(true);
+                    }
+                });
+            });
+                // Check if the response is successful
         } catch (Exception e) {
             scriptEntry.saveObject("data", new ElementTag("false"));
             scriptEntry.setFinished(true);
