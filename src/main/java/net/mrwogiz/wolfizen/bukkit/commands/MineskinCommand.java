@@ -107,7 +107,6 @@ public class MineskinCommand extends AbstractCommand {
                 status.set(response.getStatus());
                 result.set(response.getBody());
                 Bukkit.getScheduler().runTask(Wolfizen.getPluginI(),() -> {
-                    System.out.println(status.get() == 200);
                     if (status.get() == 200) {
                         scriptEntry.saveObject("data", new ElementTag(result.get()));
                         scriptEntry.setFinished(true);
